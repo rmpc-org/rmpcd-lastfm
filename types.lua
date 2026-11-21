@@ -10,14 +10,11 @@
 
 ---@class LastFmPlugin: RmpcdPlugin<LastFmArgs>
 ---@field enabled boolean
----@field session_key string | nil
+---@field api LastFmApi
 ---@field scrobble_queue Deque<{ song: Song, timestamp: integer }>
 ---@field listen Listen | nil
 ---@field playback_state PlaybackState | nil Kept in sync with state_change events, nil until known
----@field api_key string
----@field shared_secret string
 ---@field update_now_playing boolean
----@field session_key_path string
 
 local M = {}
 return M
