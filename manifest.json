@@ -1,0 +1,5 @@
+{
+    "author": "mierak",
+    "name": "lastfm",
+    "entry_point": "lastfm.lua"
+}
