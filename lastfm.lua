@@ -1,3 +1,7 @@
+local first_tag = require("util").first_tag
+local Listen = require("listen")
+local Deque = require("deque")
+
 ---@type LastFmPlugin
 ---@diagnostic disable-next-line: missing-fields
 local M = {}
@@ -50,15 +54,6 @@ local function describe_failure(resp)
 		return "Last.fm error " .. tostring(err.error) .. ": " .. tostring(err.message)
 	end
 	return resp.error or ("HTTP " .. tostring(resp.code))
-end
-
----@param value MetadataValue|nil
----@return string|nil
-local function first_tag(value)
-	if value == nil or value:first() == "" then
-		return nil
-	end
-	return value:first()
 end
 
 ---@param ms integer
@@ -131,60 +126,6 @@ local function get_session_key(api_key, shared_secret, token)
 	end
 
 	return nil
-end
-
----@class Deque<T>
----@field first integer
----@field last integer
----@field [integer] T
-local Deque = {}
-Deque.__index = Deque
-
----@generic T
----@return Deque<T>
-function Deque.new()
-	return setmetatable({ first = 0, last = -1 }, Deque)
-end
-
----@generic T
----@param value T
-function Deque:push_right(value)
-	local last = self.last + 1
-	self.last = last
-	self[last] = value
-end
-
----@generic T
----@return T
-function Deque:pop_left()
-	local first = self.first
-	if first > self.last then
-		return nil
-	end
-	local value = self[first]
-	self[first] = nil
-	self.first = first + 1
-	return value
-end
-
----@generic T
----@return T
-function Deque:peek_right()
-	local last = self.last
-	if self.first > last then
-		return nil
-	end
-	return self[last]
-end
-
----@generic T
----@return T
-function Deque:peek_left()
-	local first = self.first
-	if first > self.last then
-		return nil
-	end
-	return self[first]
 end
 
 ---@alias ScrobbleResult
@@ -260,80 +201,6 @@ local function process_scrobble_queue(api_key, session_key, shared_secret, scrob
 		scrobble_queue:pop_left()
 	end
 	log.info("Finished processing scrobble queue")
-end
-
-local MIN_TRACK_LENGTH_SECS = 30
-local ALWAYS_SCROBBLE_AFTER_SECS = 4 * 60
-local RESTART_WINDOW_SECS = 10
-
----@class Listen
----@field song QueuedSong
----@field started_at integer|nil When the song first started playing, sent as the scrobble timestamp
----@field played_secs integer How long it played before the last pause
----@field resumed_at integer|nil When it last started playing, nil while it's not playing
----@field handled boolean Whether it was already queued for scrobbling or skipped
-local Listen = {}
-Listen.__index = Listen
-
----@param song QueuedSong
----@param now integer
----@param playing boolean
----@return Listen
-function Listen.new(song, now, playing)
-	local listen = setmetatable({ song = song, played_secs = 0, handled = false }, Listen)
-	if playing then
-		listen:resume(now)
-	end
-	return listen
-end
-
----@param now integer
-function Listen:resume(now)
-	if self.resumed_at == nil then
-		self.started_at = self.started_at or now
-		self.resumed_at = now
-	end
-end
-
----@param now integer
-function Listen:pause(now)
-	if self.resumed_at ~= nil then
-		self.played_secs = self.played_secs + (now - self.resumed_at)
-		self.resumed_at = nil
-	end
-end
-
----@param now integer
----@return integer
-function Listen:listened_secs(now)
-	if self.resumed_at == nil then
-		return self.played_secs
-	end
-	return self.played_secs + (now - self.resumed_at)
-end
-
----@param now integer
----@return boolean
-function Listen:should_scrobble(now)
-	local duration_secs = self.song.duration / 1000
-	if duration_secs <= MIN_TRACK_LENGTH_SECS then
-		return false
-	end
-
-	local listened_secs = self:listened_secs(now)
-	return listened_secs >= ALWAYS_SCROBBLE_AFTER_SECS or listened_secs >= duration_secs / 2
-end
-
----@param elapsed_secs number Where MPD is in the song
----@param now integer
----@return boolean
-function Listen:started_over(elapsed_secs, now)
-	return elapsed_secs < RESTART_WINDOW_SECS and self:listened_secs(now) - elapsed_secs > RESTART_WINDOW_SECS
-end
-
----@return boolean
-function Listen:has_required_tags()
-	return first_tag(self.song.artist) ~= nil and first_tag(self.song.title) ~= nil
 end
 
 ---@param self LastFmPlugin
@@ -429,8 +296,11 @@ M.setup = function(self, args)
 		if os.time() >= give_up_at then
 			polling = false
 			handle.cancel()
-			log.error("Gave up waiting for Last.fm browser auth after " .. AUTH_TIMEOUT_MINS
-				.. " minutes, restart rmpcd to try again")
+			log.error(
+				"Gave up waiting for Last.fm browser auth after "
+					.. AUTH_TIMEOUT_MINS
+					.. " minutes, restart rmpcd to try again"
+			)
 			return
 		end
 
