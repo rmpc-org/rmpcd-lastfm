@@ -1,4 +1,4 @@
-local first_tag = require("util").first_tag
+local first_tag = require("src.util").first_tag
 
 local API_URL = "https://ws.audioscrobbler.com/2.0/"
 local HTTP_TIMEOUT_MS = 10 * 1000

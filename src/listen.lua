@@ -1,4 +1,4 @@
-local first_tag = require("util").first_tag
+local first_tag = require("src.util").first_tag
 
 local MIN_TRACK_LENGTH_SECS = 30
 local ALWAYS_SCROBBLE_AFTER_SECS = 4 * 60

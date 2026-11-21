@@ -1,7 +1,7 @@
-local Api = require("api")
-local auth = require("auth")
-local Listen = require("listen")
-local Deque = require("deque")
+local Api = require("src.api")
+local auth = require("src.auth")
+local Listen = require("src.listen")
+local Deque = require("src.deque")
 
 local DEFAULT_SESSION_KEY_PATH = os.getenv("HOME") .. "/.local/share/rmpcd/lastfm-session-key"
 

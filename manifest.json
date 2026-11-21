@@ -1,5 +1,5 @@
 {
     "author": "mierak",
     "name": "lastfm",
-    "entry_point": "lastfm.lua"
+    "entry_point": "src/lastfm.lua"
 }
