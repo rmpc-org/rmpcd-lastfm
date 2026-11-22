@@ -6,7 +6,7 @@ You need your own Last.fm API account. Go to <https://www.last.fm/api/account/cr
 account and then put the `API key` and `Shared secret` into your `init.lua`.
 
 ```lua
----@type LastFmPlugin
+---@type LastFmPluginHandle
 local lastfm = rmpcd.install({ url = "https://github.com/rmpc-org/rmpcd-lastfm.git" })
 lastfm:setup({
 	api_key = "<your api key>",
@@ -28,7 +28,9 @@ allow access, after that restart rmpcd to get a new link.
 defaults.
 
 ```lua
-rmpcd.install({ url = "https://github.com/rmpc-org/rmpcd-lastfm.git" }):setup({
+---@type LastFmPluginHandle
+local lastfm = rmpcd.install({ url = "https://github.com/rmpc-org/rmpcd-lastfm.git" })
+lastfm:setup({
 	api_key = "<your api key>",
 	shared_secret = "<your shared secret>",
 	-- Send the current song to Last.fm as "now playing"

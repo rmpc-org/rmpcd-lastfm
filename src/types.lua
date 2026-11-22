@@ -16,5 +16,7 @@
 ---@field playback_state PlaybackState | nil Kept in sync with state_change events, nil until known
 ---@field update_now_playing boolean
 
+---@alias LastFmPluginHandle RmpcdPluginHandle<LastFmArgs>
+
 local M = {}
 return M
