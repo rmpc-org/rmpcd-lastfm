@@ -68,6 +68,26 @@ local function describe_failure(resp)
 	return resp.error or ("HTTP " .. tostring(resp.code))
 end
 
+---@param resp HttpResponse
+---@return string|nil reason nil when Last.fm kept the scrobble, or its answer is not the documented shape
+local function ignored_reason(resp)
+	local ok, code, text = pcall(function()
+		local scrobbles = resp:json().scrobbles
+		if tonumber(scrobbles["@attr"].ignored) == 0 then
+			return nil
+		end
+		local message = scrobbles.scrobble.ignoredMessage
+		return message.code, message["#text"]
+	end)
+	if not ok or code == nil then
+		return nil
+	end
+	if text == nil or text == "" then
+		return "code " .. tostring(code)
+	end
+	return tostring(text) .. " (code " .. tostring(code) .. ")"
+end
+
 ---@param ms integer
 ---@return integer
 local function ms_to_secs(ms)
@@ -189,6 +209,12 @@ function Api:scrobble(song, timestamp)
 
 	local err = lastfm_error(resp)
 	if resp.code == 200 and err == nil then
+		log.debug("Last.fm scrobble response: " .. tostring(resp.body))
+		local ignored = ignored_reason(resp)
+		if ignored ~= nil then
+			log.warn("Last.fm ignored the scrobble of " .. song.file .. ", dropping it: " .. ignored)
+			return "rejected"
+		end
 		log.info("Scrobbled: " .. song.file)
 		return "sent"
 	end
